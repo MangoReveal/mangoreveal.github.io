@@ -7,10 +7,86 @@
 
   <title>Who's That Pokémon?</title>
 
+  <meta
+    name="description"
+    content="Make a dramatic Who's That Pokémon? style reveal video with a mystery silhouette and a Pokémon cry. Unofficial fan project, not affiliated with Nintendo, Game Freak, or The Pokémon Company.">
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="16x16"
+    href="./Mango/Assets/Extras/icon-16.png">
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="./Mango/Assets/Extras/icon-32.png">
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="48x48"
+    href="./Mango/Assets/Extras/icon-48.png">
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="192x192"
+    href="./Mango/Assets/Extras/icon-192.png">
+
+  <link
+    rel="apple-touch-icon"
+    sizes="180x180"
+    href="./Mango/Assets/Extras/icon-180.png">
+
+  <link
+    rel="shortcut icon"
+    href="./Mango/Assets/Extras/favicon.ico">
+
+  <meta
+    property="og:title"
+    content="Who's That Pokémon? Reveal Video Maker">
+
+  <meta
+    property="og:description"
+    content="Make a dramatic Who's That Pokémon? style reveal video. Unofficial fan project, not affiliated with Nintendo, Game Freak, or The Pokémon Company.">
+
+  <meta
+    property="og:image"
+    content="./Mango/Assets/Extras/icon-512.png">
+
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+  <svg
+    width="0"
+    height="0"
+    style="position: absolute; overflow: hidden;"
+    aria-hidden="true">
+    <defs>
+      <!--
+        Gentle unsharp-mask style sharpen. Boosts edge contrast
+        to help claw back perceived crispness from soft/old
+        source footage - it cannot invent real detail, only make
+        existing edges read more clearly. Kept mild since
+        sharpening also amplifies noise/grain, which old footage
+        already has plenty of.
+      -->
+      <filter id="pokedexSharpen" x="-10%" y="-10%" width="120%" height="120%">
+        <feConvolveMatrix
+          order="3"
+          kernelMatrix="0 -0.5 0 -0.5 3 -0.5 0 -0.5 0"
+          divisor="1"
+          bias="0"
+          edgeMode="duplicate"
+          preserveAlpha="true">
+        </feConvolveMatrix>
+      </filter>
+    </defs>
+  </svg>
+
   <main class="app-shell">
     <header class="app-header">
       <div class="brand-lockup">
@@ -246,6 +322,50 @@
           <div id="hdBackgroundStatus" class="inline-status">
             Using the standard background video.
           </div>
+
+          <label for="exportFrameRate">
+            Download frame rate:
+            <span id="exportFrameRateLabel">30</span> fps
+          </label>
+
+          <input
+            id="exportFrameRate"
+            type="range"
+            min="15"
+            max="60"
+            step="1"
+            value="30">
+
+          <p class="advanced-help">
+            Higher looks smoother but makes a bigger file. 24-30
+            is the usual range for video; go higher only if you
+            need extra-smooth motion.
+          </p>
+
+          <label for="exportQuality">
+            Download quality:
+            <span id="exportQualityLabel">6</span> Mbps
+          </label>
+
+          <input
+            id="exportQuality"
+            type="range"
+            min="2"
+            max="20"
+            step="1"
+            value="6">
+
+          <p class="advanced-help">
+            More bitrate gives the recorder more room to work
+            with, which helps most on grainy or soft source
+            footage. It can't add detail that isn't there, but it
+            avoids piling extra compression damage on top.
+          </p>
+
+          <label class="checkbox-row" for="sharpenVideo">
+            <input id="sharpenVideo" type="checkbox" checked>
+            <span>Sharpen picture (helps soft/old source video)</span>
+          </label>
         </section>
       </div>
     </section>
@@ -860,6 +980,20 @@
         </section>
       </aside>
     </div>
+
+    <footer class="legal-footer">
+      <p>
+        This is an unofficial, fan-made project. It is not
+        affiliated with, endorsed by, sponsored by, or in any
+        way officially connected with Nintendo, Game Freak,
+        Creatures Inc., or The Pokémon Company, or any of their
+        subsidiaries or affiliates. Pokémon and all related
+        names, characters, sounds, and imagery are trademarks
+        of their respective owners and are used here for
+        parody/fan purposes only, without any claim of
+        ownership.
+      </p>
+    </footer>
   </main>
 
   <div
