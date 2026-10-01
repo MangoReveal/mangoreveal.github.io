@@ -9,6 +9,11 @@
     standardBackgroundVideo: "./Mango/background.mp4",
     hdBackgroundVideo: "./Mango/backgroundHD.mp4",
 
+    // TODO: set this once the Cloud Run video service is deployed,
+    // e.g. "https://whos-that-pokemon-video-xxxxx.a.run.app".
+    // Leave blank to keep using the in-browser recording fallback.
+    videoServiceUrl: "",
+
     pokeApiBase: "https://pokeapi.co/api/v2",
     maxSearchResults: 50,
     maxSoundDuration: 2.5,
@@ -942,7 +947,15 @@
 
     video.addEventListener("play", () => {
       updatePlayButton(true);
-      startPreviewRenderLoop();
+
+      // exportRenderLoop drives drawing during an export - it
+      // calls video.play() itself, which fires this same event.
+      // without this check we'd end up with both loops drawing
+      // the same frame every tick for the whole export. found
+      // that one by actually profiling, not fun
+      if (!state.export.started) {
+        startPreviewRenderLoop();
+      }
     });
 
     video.addEventListener("pause", () => {
@@ -978,11 +991,8 @@
   }
 
   function startPreviewRenderLoop() {
-    // `timeupdate` only fires a handful of times per second, so
-    // relying on it alone made the live preview look choppy.
-    // Drive the canvas from requestAnimationFrame instead while
-    // the video is actually playing, matching how the export
-    // recorder already renders (see exportRenderLoop below).
+    // timeupdate fires like 4x/sec, way too choppy for a live
+    // preview. rAF it is (same trick exportRenderLoop uses).
     if (state.preview.animationFrame !== null) {
       return;
     }
@@ -1070,11 +1080,9 @@
   ];
 
   function bindTimingControls() {
-    // Attach each slider's listener exactly once, here, rather
-    // than inside updateTimingControls() - that function runs
-    // every time the video reloads (e.g. toggling the HD
-    // background), and re-adding a listener on every call let
-    // duplicates pile up silently.
+    // bind once, here. updateTimingControls() gets called every
+    // time the video reloads (HD toggle etc) - had listeners
+    // stacking up silently before I split this out. classic.
     for (const [inputId, labelId, key] of TIMING_CONTROLS) {
       const input = state.ui[inputId];
       const label = state.ui[labelId];
@@ -1198,12 +1206,10 @@
           state.sound.previewElement.currentTime = 0;
         }
 
-        // Don't play the Pokémon cry immediately - it should
-        // only start once playback actually reaches
-        // state.timing.soundStart. The render loop below
-        // handles the actual timed trigger. If we're resuming
-        // from a point already past that timestamp, mark it as
-        // already triggered so it doesn't fire late.
+        // don't fire the cry here - render loop below handles it
+        // once currentTime actually hits soundStart. if we're
+        // resuming past that point already, mark it triggered so
+        // it doesn't play late and confuse everyone
         state.preview.soundTriggered =
           video.currentTime >= state.timing.soundStart;
 
@@ -1611,13 +1617,10 @@
   }
 
   function applySnipSkip() {
-    // If the user has chosen to cut a section out of the video
-    // (to shorten it), jump straight over that range whenever
-    // playback reaches it. Everything else - blankStart,
-    // blankEnd, revealedStart, soundStart - keeps reading
-    // video.currentTime exactly as before, on the original
-    // timeline, so none of that logic needs to know this
-    // happened.
+    // snip = jump over a chunk of the video when we hit it.
+    // everything else (blankStart/blankEnd/revealedStart/
+    // soundStart) still reads currentTime like normal - they
+    // have no idea this is happening, which is the whole point
     if (!state.snip.enabled) {
       return;
     }
@@ -1644,11 +1647,9 @@
       return;
     }
 
-    // Without this, the browser's default (often low/medium
-    // quality) algorithm is used to scale the source video onto
-    // the canvas whenever their resolutions don't match exactly
-    // - adding extra blur on top of an already low-quality
-    // source. This uses the best scaling available instead.
+    // default scaling quality is low/medium in most browsers,
+    // which was adding extra blur on top of source video that's
+    // already not great. bump it up, it's basically free here
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
 
@@ -1664,9 +1665,19 @@
 
       if (video.readyState >= 2) {
         try {
-          context.filter = state.sharpenEnabled
-            ? "url(#pokedexSharpen)"
-            : "none";
+          // sharpen = real convolution matrix, not some cheap CSS
+          // trick. running it every frame during playback murders
+          // older hardware for a difference you can't even see
+          // while stuff's moving. keep it for paused frames +
+          // exports, skip it during live scrubbing/playback
+          const livePlayback =
+            state.preview.animationFrame !== null &&
+            !state.export.started;
+
+          context.filter =
+            state.sharpenEnabled && !livePlayback
+              ? "url(#pokedexSharpen)"
+              : "none";
 
           context.drawImage(
             video,
@@ -1685,13 +1696,10 @@
         drawCanvasFallback(context);
       }
     }
-    // While seeking - most notably right after a snip skip
-    // jumps the playhead - the browser hasn't decoded the new
-    // frame yet, and clearing + redrawing here would flash
-    // black for a frame or two. Leaving the canvas untouched
-    // freezes it on the last good frame instead; the render
-    // loop keeps calling this every tick, so the moment the
-    // seek finishes, the very next frame draws normally.
+    // mid-seek (snip jumps, mostly) the browser hasn't decoded
+    // the new frame yet - clearing here flashes black for a tick.
+    // just leave the canvas alone and let it freeze on the last
+    // good frame til the seek actually finishes
 
     const revealed = shouldShowRevealedArtwork();
     const currentTime =
@@ -1845,10 +1853,10 @@
   }
 
   async function loadDefaultArtwork() {
-    // Load a real, working default (Magikarp) straight from
-    // the Pokémon search/select flow instead of depending on
-    // local placeholder files in Mango/, which is what made the
-    // default state invisible when those files were missing.
+    // defaults to Magikarp via the actual search/select flow -
+    // no more depending on local placeholder files that may or
+    // may not exist. that's what was causing the invisible
+    // default state for like three days straight lol
     state.ui.pokemonSearch.value = "magikarp";
 
     await searchPokemon();
@@ -1861,11 +1869,10 @@
     }
 
     if (!state.blankImage) {
-      // The revealed picture loaded fine but the silhouette
-      // didn't. Surface this on the always-visible canvas
-      // overlay (not just the Pokémon panel's status text,
-      // which may be hidden behind a different workflow tab
-      // on first load) so this never fails silently again.
+      // revealed pic loaded fine, silhouette didn't - surface
+      // this on the canvas itself, not the panel status text
+      // (that can be hidden behind a different tab). learned
+      // this one the hard way, never again
       console.error(
         "Default artwork loaded but the mystery silhouette is missing.",
       );
@@ -1884,10 +1891,9 @@
     url,
     displayName = "Online picture",
   ) {
-    // PokéAPI's artwork is served from raw.githubusercontent.com,
-    // which sends permissive CORS headers - no proxy needed to
-    // load it directly and safely read its pixels for the
-    // silhouette (see loadImage()'s crossOrigin setting below).
+    // no proxy needed - raw.githubusercontent.com (where PokéAPI
+    // artwork lives) sends CORS headers, so we can just load it
+    // straight and still read pixels for the silhouette
     const image = await loadImage(url);
 
     state.revealedImage = image;
@@ -1898,10 +1904,8 @@
       state.blankImage = await generateSilhouette(image);
       state.blankSource = "generated";
     } catch (error) {
-      // Don't let a silhouette failure silently abort the rest
-      // of this function - the revealed picture already loaded
-      // successfully and should still be shown/usable, and we
-      // want this failure to be visible instead of invisible.
+      // silhouette failing shouldn't nuke the rest of this fn -
+      // revealed pic already loaded fine, still show it
       console.error(
         "Silhouette generation failed:",
         error,
@@ -2046,8 +2050,8 @@
     };
 
     const blankLabels = {
-      generated: "BlackedOut picture made automatically",
-      upload: "Custom BlackedOut picture uploaded",
+      generated: "Silhouette made automatically",
+      upload: "Custom silhouette uploaded",
     };
 
     const revealedText =
@@ -2059,14 +2063,14 @@
         state.ui.pictureStatus,
         `${revealedText} — ${
           blankLabels[state.blankSource] ||
-          "BlackedOut picture ready"
+          "Silhouette ready"
         }.`,
         "success",
       );
     } else {
       setStatus(
         state.ui.pictureStatus,
-        `${revealedText}, but the BlackedOut picture could not be made.`,
+        `${revealedText}, but the silhouette could not be made.`,
         "error",
       );
     }
@@ -2180,12 +2184,8 @@
 
       state.selectedPokemon = extractPokemonDetails(raw);
 
-      // The previous Pokémon's cry must not survive a new
-      // selection - usePokemonSound() below reuses
-      // state.selectedSound if it's already set, so leaving the
-      // old one in place would silently keep playing/using the
-      // previous Pokémon's sound (or its cached version) instead
-      // of fetching the new one.
+      // gotta clear this or usePokemonSound() below just reuses
+      // whatever's cached from the last pokemon. bit by this once
       state.selectedSound = null;
 
       state.ui.pokemonName.value =
@@ -2205,9 +2205,8 @@
 
       updateCryAvailability();
 
-      // If the user hasn't explicitly chosen their own audio
-      // (upload/recording), the sound should always follow
-      // whichever Pokémon is currently selected.
+      // only auto-follow the pokemon if they haven't picked their
+      // own audio - don't want to steamroll a custom upload
       if (
         state.sound.source === "default" ||
         state.sound.source === "pokemon"
@@ -2281,9 +2280,8 @@
       );
     }
 
-    // The cry URLs already came back with the Pokémon's details
-    // when it was selected, so there's no need for a second
-    // network round-trip here - just look the version up.
+    // already have the cry urls from when the pokemon loaded,
+    // no need to fetch again - just grab the right version
     const url =
       version === "legacy"
         ? state.selectedPokemon.cries.legacy
@@ -3220,10 +3218,9 @@
       );
     }
 
-    // The source video's native frame rate is well under 60fps,
-    // so capturing much higher than that mostly just duplicates
-    // frames - bigger file, no real smoothness gain. The user
-    // can still choose to go higher via the frame rate slider.
+    // source is nowhere near 60fps so cranking capture higher
+    // just duplicates frames - bigger file, zero smoothness win.
+    // slider lets people go higher anyway if they really want
     return state.ui.canvas.captureStream(
       state.exportFrameRate,
     );
@@ -3250,22 +3247,275 @@
   }
 
   function setExportLock(locked) {
-    // While actually recording, nothing on screen should be
-    // touchable - dragging/resizing the picture, changing
-    // volume, toggling the name caption, etc. would all leak
-    // straight into the captured video since export is really
-    // just recording live playback. Lock it all down so the
-    // only thing happening during a recording is the recording.
+    // nothing should be touchable mid-recording - dragging the
+    // pic, changing volume, whatever, all leaks straight into
+    // the captured video since this is literally just recording
+    // live playback. lock it down, only the recording happens
     document.body.classList.toggle(
       "export-locked",
       locked,
     );
   }
 
+  function audioBufferToWav(buffer) {
+    // quick PCM16 WAV encoder - server just needs plain WAV,
+    // didn't feel like pulling in a whole library for this
+    const channels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const length = buffer.length;
+    const bytesPerSample = 2;
+    const blockAlign = channels * bytesPerSample;
+    const dataSize = length * blockAlign;
+
+    const arrayBuffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(arrayBuffer);
+
+    const writeString = (offset, text) => {
+      for (let i = 0; i < text.length; i += 1) {
+        view.setUint8(offset + i, text.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true);
+    writeString(36, "data");
+    view.setUint32(40, dataSize, true);
+
+    const channelData = [];
+
+    for (let c = 0; c < channels; c += 1) {
+      channelData.push(buffer.getChannelData(c));
+    }
+
+    let offset = 44;
+
+    for (let i = 0; i < length; i += 1) {
+      for (let c = 0; c < channels; c += 1) {
+        const sample = Math.max(
+          -1,
+          Math.min(1, channelData[c][i]),
+        );
+
+        view.setInt16(
+          offset,
+          sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+          true,
+        );
+
+        offset += 2;
+      }
+    }
+
+    return new Blob([arrayBuffer], { type: "audio/wav" });
+  }
+
+  function renderOverlayBlob(drawFn) {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement("canvas");
+
+      canvas.width = CONFIG.canvas.width;
+      canvas.height = CONFIG.canvas.height;
+
+      const context = canvas.getContext("2d");
+
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+
+      drawFn(context);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(
+            new Error("A picture overlay could not be created."),
+          );
+        }
+      }, "image/png");
+    });
+  }
+
+  async function startServerExport() {
+    if (!state.revealedImage || !state.blankImage) {
+      throw new Error(
+        "Choose a picture before creating the video.",
+      );
+    }
+
+    const selectedSound = createSelectedSoundBuffer();
+
+    if (!selectedSound) {
+      throw new Error(
+        "Choose a sound section no longer than " +
+          `${CONFIG.maxSoundDuration}s before creating the video.`,
+      );
+    }
+
+    const [blankBlob, revealedBlob, captionBlob, wavBlob] =
+      await Promise.all([
+        renderOverlayBlob((context) => {
+          drawImageContain(
+            context,
+            state.blankImage,
+            state.artwork.x,
+            state.artwork.y,
+            state.artwork.width,
+            state.artwork.height,
+          );
+        }),
+        renderOverlayBlob((context) => {
+          drawImageContain(
+            context,
+            state.revealedImage,
+            state.artwork.x,
+            state.artwork.y,
+            state.artwork.width,
+            state.artwork.height,
+          );
+        }),
+        state.showNameText
+          ? renderOverlayBlob((context) => {
+              const displayName =
+                state.selectedPokemon?.displayName ||
+                state.ui.pokemonName?.value?.trim();
+
+              if (displayName) {
+                drawNameCaption(context, displayName);
+              }
+            })
+          : null,
+        Promise.resolve(audioBufferToWav(selectedSound)),
+      ]);
+
+    const formData = new FormData();
+
+    formData.set("blank_overlay", blankBlob, "blank.png");
+    formData.set(
+      "revealed_overlay",
+      revealedBlob,
+      "revealed.png",
+    );
+
+    if (captionBlob) {
+      formData.set(
+        "caption_overlay",
+        captionBlob,
+        "caption.png",
+      );
+    }
+
+    formData.set("cry_audio", wavBlob, "cry.wav");
+
+    formData.set(
+      "blank_start",
+      String(state.timing.blankStart),
+    );
+    formData.set("blank_end", String(state.timing.blankEnd));
+    formData.set(
+      "revealed_start",
+      String(state.timing.revealedStart),
+    );
+    formData.set(
+      "sound_start",
+      String(state.timing.soundStart),
+    );
+    formData.set(
+      "snip_enabled",
+      String(state.snip.enabled),
+    );
+    formData.set("snip_start", String(state.snip.start));
+    formData.set("snip_end", String(state.snip.end));
+    formData.set(
+      "frame_rate",
+      String(state.exportFrameRate),
+    );
+    formData.set(
+      "max_mbps",
+      String(
+        Math.max(
+          1,
+          Math.round(state.exportQuality / 1_000_000),
+        ),
+      ),
+    );
+    formData.set(
+      "sharpen_enabled",
+      String(state.sharpenEnabled),
+    );
+    formData.set(
+      "use_hd_background",
+      String(state.ui.useHdBackground.checked),
+    );
+    formData.set(
+      "bg_volume",
+      String(state.volume.background),
+    );
+    formData.set("cry_volume", String(state.volume.sound));
+
+    updateEditorStatus("Creating");
+    setExportLock(true);
+    state.ui.downloadButton.disabled = true;
+
+    try {
+      const response = await fetch(
+        `${CONFIG.videoServiceUrl}/create-video`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      if (!response.ok) {
+        let message =
+          "The reveal video could not be created.";
+
+        try {
+          const data = await response.json();
+          message = data.error || message;
+        } catch {
+          // Response wasn't JSON - keep the default message.
+        }
+
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const url = trackObjectUrl(URL.createObjectURL(blob));
+      const anchor = document.createElement("a");
+
+      anchor.href = url;
+      anchor.download = createExportFilename("video/mp4");
+      anchor.click();
+
+      setTimeout(() => revokeObjectUrl(url), 1000);
+
+      maybeShowUpvotePopup();
+    } finally {
+      state.ui.downloadButton.disabled = false;
+      updateEditorStatus("Ready");
+      setExportLock(false);
+    }
+  }
+
   async function startExport() {
     if (state.export.started) {
       return;
     }
+
+    // stop it explicitly - if the preview was already playing
+    // when Download got clicked, the video never actually fires
+    // a fresh 'play' event (it's already playing), so the guard
+    // in that listener wouldn't catch this path. belt and braces
+    stopPreviewRenderLoop();
 
     if (!window.MediaRecorder) {
       throw new Error(
@@ -3293,13 +3543,11 @@
     const canvasStream = getCanvasStream();
     const video = state.ui.backgroundVideo;
 
-    // Reuse the existing preview audio graph instead of making a
-    // second connection to the video element - a <video> can only
-    // ever be connected to ONE MediaElementSourceNode for its
-    // entire lifetime, and the live preview already claims it the
-    // first time it plays. Trying to connect it again is what was
-    // throwing "already connected previously to a different
-    // MediaElementSourceNode" and silently killing the export.
+    // reuse the preview's audio graph instead of making a second
+    // connection - a <video> can only ever have ONE
+    // MediaElementSourceNode for its whole life. tried connecting
+    // a second one here originally, browser was NOT having it
+    // ("already connected previously to a different..."). fun one
     const previewGraph = createPreviewAudioGraph();
     const context = previewGraph.context;
 
@@ -3401,9 +3649,8 @@
           .getTracks()
           .forEach((track) => track.stop());
 
-        // Don't close `context` - it's the shared preview audio
-        // graph, still needed for playback after this export
-        // finishes. Just disconnect the export-only routing.
+        // don't close context, it's the shared preview graph and
+        // still needed after this - just unhook our bit of it
         try {
           previewGraph.backgroundGain.disconnect(
             audioDestination,
@@ -3447,12 +3694,9 @@
 
     recorder.start(250);
 
-    // Trigger the sound reactively (checked each frame against
-    // the actual, possibly snip-adjusted currentTime) rather
-    // than pre-scheduling it by a fixed real-time delay - a
-    // fixed delay would desync from the reveal moment whenever
-    // a snip skip changes how much real time it takes to reach
-    // soundStart on the video's timeline.
+    // trigger reactively per-frame instead of pre-scheduling a
+    // fixed delay - a fixed delay desyncs the second a snip skip
+    // changes how much real time it takes to reach soundStart
     const soundDuration = Math.min(
       selectedSound.duration,
       CONFIG.maxSoundDuration,
@@ -3535,7 +3779,13 @@
 
   async function handleExport() {
     try {
-      await startExport();
+      if (CONFIG.videoServiceUrl) {
+        await startServerExport();
+      } else {
+        // no video service set up yet, fall back to the
+        // in-browser recording so downloads still work
+        await startExport();
+      }
     } catch (error) {
       console.error("Video creation failed:", error);
 
@@ -3546,11 +3796,10 @@
       updateEditorStatus("Ready");
       setExportLock(false);
 
-      // Show this where it's actually visible - audioTrimStatus
-      // lives inside the collapsed "Trim Audio" panel, so an
-      // error written there was invisible unless the user
-      // happened to have that panel open. The download button
-      // then just looked like it silently did nothing.
+      // show it somewhere actually visible - audioTrimStatus is
+      // inside the collapsed Trim Audio panel, errors written
+      // there basically vanish. download button looked broken
+      // for the longest time because of this exact thing
       setCanvasMessage(
         error.message ||
           "The reveal video could not be created.",
