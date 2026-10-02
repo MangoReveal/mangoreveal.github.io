@@ -12,7 +12,7 @@
     // TODO: set this once the Cloud Run video service is deployed,
     // e.g. "https://whos-that-pokemon-video-xxxxx.a.run.app".
     // Leave blank to keep using the in-browser recording fallback.
-    videoServiceUrl: "",
+    videoServiceUrl: "https://pokepoke-6uzj.onrender.com",
 
     pokeApiBase: "https://pokeapi.co/api/v2",
     maxSearchResults: 50,
