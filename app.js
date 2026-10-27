@@ -9,11 +9,6 @@
     standardBackgroundVideo: "./Mango/background.mp4",
     hdBackgroundVideo: "./Mango/backgroundHD.mp4",
 
-    // TODO: set this once the Cloud Run video service is deployed,
-    // e.g. "https://whos-that-pokemon-video-xxxxx.a.run.app".
-    // Leave blank to keep using the in-browser recording fallback.
-    videoServiceUrl: "https://pokepoke-6uzj.onrender.com",
-
     pokeApiBase: "https://pokeapi.co/api/v2",
     maxSearchResults: 50,
     maxSoundDuration: 2.5,
@@ -89,7 +84,6 @@
       end: 8.72,
     },
 
-    exportFrameRate: 30,
     exportQuality: 6_000_000,
     sharpenEnabled: true,
 
@@ -195,9 +189,6 @@
 
       useHdBackground: $("#useHdBackground"),
       hdBackgroundStatus: $("#hdBackgroundStatus"),
-
-      exportFrameRate: $("#exportFrameRate"),
-      exportFrameRateLabel: $("#exportFrameRateLabel"),
 
       exportQuality: $("#exportQuality"),
       exportQualityLabel: $("#exportQualityLabel"),
@@ -835,18 +826,6 @@
         switchBackgroundVideoSource(
           CONFIG.hdBackgroundVideo,
         );
-      },
-    );
-
-    state.ui.exportFrameRate.addEventListener(
-      "input",
-      () => {
-        state.exportFrameRate = Number(
-          state.ui.exportFrameRate.value,
-        );
-
-        state.ui.exportFrameRateLabel.textContent =
-          String(state.exportFrameRate);
       },
     );
 
@@ -3125,10 +3104,6 @@
           );
         }
 
-        state.exportFrameRate = 30;
-        state.ui.exportFrameRate.value = "30";
-        state.ui.exportFrameRateLabel.textContent = "30";
-
         state.exportQuality = 6_000_000;
         state.ui.exportQuality.value = "6";
         state.ui.exportQualityLabel.textContent = "6";
@@ -3218,12 +3193,10 @@
       );
     }
 
-    // source is nowhere near 60fps so cranking capture higher
-    // just duplicates frames - bigger file, zero smoothness win.
-    // slider lets people go higher anyway if they really want
-    return state.ui.canvas.captureStream(
-      state.exportFrameRate,
-    );
+    // 30 on purpose. the source clip isn't anywhere near 60fps so
+    // capturing higher just dupes frames and bloats the file.
+    // (had a slider for this once, pointless - clip is what it is)
+    return state.ui.canvas.captureStream(30);
   }
 
   function getSupportedVideoMimeType() {
@@ -3255,255 +3228,6 @@
       "export-locked",
       locked,
     );
-  }
-
-  function audioBufferToWav(buffer) {
-    // quick PCM16 WAV encoder - server just needs plain WAV,
-    // didn't feel like pulling in a whole library for this
-    const channels = buffer.numberOfChannels;
-    const sampleRate = buffer.sampleRate;
-    const length = buffer.length;
-    const bytesPerSample = 2;
-    const blockAlign = channels * bytesPerSample;
-    const dataSize = length * blockAlign;
-
-    const arrayBuffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(arrayBuffer);
-
-    const writeString = (offset, text) => {
-      for (let i = 0; i < text.length; i += 1) {
-        view.setUint8(offset + i, text.charCodeAt(i));
-      }
-    };
-
-    writeString(0, "RIFF");
-    view.setUint32(4, 36 + dataSize, true);
-    writeString(8, "WAVE");
-    writeString(12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, channels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * blockAlign, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, 16, true);
-    writeString(36, "data");
-    view.setUint32(40, dataSize, true);
-
-    const channelData = [];
-
-    for (let c = 0; c < channels; c += 1) {
-      channelData.push(buffer.getChannelData(c));
-    }
-
-    let offset = 44;
-
-    for (let i = 0; i < length; i += 1) {
-      for (let c = 0; c < channels; c += 1) {
-        const sample = Math.max(
-          -1,
-          Math.min(1, channelData[c][i]),
-        );
-
-        view.setInt16(
-          offset,
-          sample < 0 ? sample * 0x8000 : sample * 0x7fff,
-          true,
-        );
-
-        offset += 2;
-      }
-    }
-
-    return new Blob([arrayBuffer], { type: "audio/wav" });
-  }
-
-  function renderOverlayBlob(drawFn) {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement("canvas");
-
-      canvas.width = CONFIG.canvas.width;
-      canvas.height = CONFIG.canvas.height;
-
-      const context = canvas.getContext("2d");
-
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = "high";
-
-      drawFn(context);
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(
-            new Error("A picture overlay could not be created."),
-          );
-        }
-      }, "image/png");
-    });
-  }
-
-  async function startServerExport() {
-    if (!state.revealedImage || !state.blankImage) {
-      throw new Error(
-        "Choose a picture before creating the video.",
-      );
-    }
-
-    const selectedSound = createSelectedSoundBuffer();
-
-    if (!selectedSound) {
-      throw new Error(
-        "Choose a sound section no longer than " +
-          `${CONFIG.maxSoundDuration}s before creating the video.`,
-      );
-    }
-
-    const [blankBlob, revealedBlob, captionBlob, wavBlob] =
-      await Promise.all([
-        renderOverlayBlob((context) => {
-          drawImageContain(
-            context,
-            state.blankImage,
-            state.artwork.x,
-            state.artwork.y,
-            state.artwork.width,
-            state.artwork.height,
-          );
-        }),
-        renderOverlayBlob((context) => {
-          drawImageContain(
-            context,
-            state.revealedImage,
-            state.artwork.x,
-            state.artwork.y,
-            state.artwork.width,
-            state.artwork.height,
-          );
-        }),
-        state.showNameText
-          ? renderOverlayBlob((context) => {
-              const displayName =
-                state.selectedPokemon?.displayName ||
-                state.ui.pokemonName?.value?.trim();
-
-              if (displayName) {
-                drawNameCaption(context, displayName);
-              }
-            })
-          : null,
-        Promise.resolve(audioBufferToWav(selectedSound)),
-      ]);
-
-    const formData = new FormData();
-
-    formData.set("blank_overlay", blankBlob, "blank.png");
-    formData.set(
-      "revealed_overlay",
-      revealedBlob,
-      "revealed.png",
-    );
-
-    if (captionBlob) {
-      formData.set(
-        "caption_overlay",
-        captionBlob,
-        "caption.png",
-      );
-    }
-
-    formData.set("cry_audio", wavBlob, "cry.wav");
-
-    formData.set(
-      "blank_start",
-      String(state.timing.blankStart),
-    );
-    formData.set("blank_end", String(state.timing.blankEnd));
-    formData.set(
-      "revealed_start",
-      String(state.timing.revealedStart),
-    );
-    formData.set(
-      "sound_start",
-      String(state.timing.soundStart),
-    );
-    formData.set(
-      "snip_enabled",
-      String(state.snip.enabled),
-    );
-    formData.set("snip_start", String(state.snip.start));
-    formData.set("snip_end", String(state.snip.end));
-    formData.set(
-      "frame_rate",
-      String(state.exportFrameRate),
-    );
-    formData.set(
-      "max_mbps",
-      String(
-        Math.max(
-          1,
-          Math.round(state.exportQuality / 1_000_000),
-        ),
-      ),
-    );
-    formData.set(
-      "sharpen_enabled",
-      String(state.sharpenEnabled),
-    );
-    formData.set(
-      "use_hd_background",
-      String(state.ui.useHdBackground.checked),
-    );
-    formData.set(
-      "bg_volume",
-      String(state.volume.background),
-    );
-    formData.set("cry_volume", String(state.volume.sound));
-
-    updateEditorStatus("Creating");
-    setExportLock(true);
-    state.ui.downloadButton.disabled = true;
-
-    try {
-      const response = await fetch(
-        `${CONFIG.videoServiceUrl}/create-video`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      if (!response.ok) {
-        let message =
-          "The reveal video could not be created.";
-
-        try {
-          const data = await response.json();
-          message = data.error || message;
-        } catch {
-          // Response wasn't JSON - keep the default message.
-        }
-
-        throw new Error(message);
-      }
-
-      const blob = await response.blob();
-      const url = trackObjectUrl(URL.createObjectURL(blob));
-      const anchor = document.createElement("a");
-
-      anchor.href = url;
-      anchor.download = createExportFilename("video/mp4");
-      anchor.click();
-
-      setTimeout(() => revokeObjectUrl(url), 1000);
-
-      maybeShowUpvotePopup();
-    } finally {
-      state.ui.downloadButton.disabled = false;
-      updateEditorStatus("Ready");
-      setExportLock(false);
-    }
   }
 
   async function startExport() {
@@ -3779,13 +3503,7 @@
 
   async function handleExport() {
     try {
-      if (CONFIG.videoServiceUrl) {
-        await startServerExport();
-      } else {
-        // no video service set up yet, fall back to the
-        // in-browser recording so downloads still work
-        await startExport();
-      }
+      await startExport();
     } catch (error) {
       console.error("Video creation failed:", error);
 
