@@ -4,12 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080a0f">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080a0f">
 
-  <title>Who's That Pokémon?</title>
+  <title>Who's That Pokémon? — Free Pokémon Reveal Video Maker</title>
 
   <meta
     name="description"
-    content="Make a dramatic Who's That Pokémon? style reveal video with a mystery silhouette and a Pokémon cry. Unofficial fan project, not affiliated with Nintendo, Game Freak, or The Pokémon Company.">
+    content="Create a free Who's That Pokémon? style reveal video online. Upload any Pokémon picture, automatically generate a mystery silhouette, add a Pokémon cry or custom sound, and download the finished video. Unofficial fan project.">
+
+  <meta
+    name="keywords"
+    content="Who's That Pokémon, Whos That Pokémon, Pokémon reveal maker, Pokémon silhouette maker, Pokémon video maker, Pokémon cry sound, Pokémon mystery silhouette, free Pokémon tool, Pokémon fan project, Pokémon reveal video generator, make Who's That Pokémon video">
+
+  <meta name="robots" content="index, follow, max-image-preview:large">
+
+  <!-- Replace with your real deployed URL when the site is live -->
+  <!-- <link rel="canonical" href="https://yourdomain.com/"> -->
 
   <link
     rel="icon"
@@ -44,17 +59,57 @@
     rel="shortcut icon"
     href="./Mango/Assets/Extras/favicon.ico">
 
-  <meta
-    property="og:title"
-    content="Who's That Pokémon? Reveal Video Maker">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Who's That Pokémon? Reveal Video Maker">
+  <meta property="og:title" content="Who's That Pokémon? — Free Pokémon Reveal Video Maker">
 
   <meta
     property="og:description"
-    content="Make a dramatic Who's That Pokémon? style reveal video. Unofficial fan project, not affiliated with Nintendo, Game Freak, or The Pokémon Company.">
+    content="Make a dramatic Who's That Pokémon? style reveal video with an automatic mystery silhouette, Pokémon cry, custom audio, and instant video download.">
+
+  <!-- Replace with your real deployed URL when the site is live -->
+  <!-- <meta property="og:url" content="https://yourdomain.com/"> -->
 
   <meta
     property="og:image"
     content="./Mango/Assets/Extras/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Who's That Pokémon? — Free Pokémon Reveal Video Maker">
+
+  <meta
+    name="twitter:description"
+    content="Create a Who's That Pokémon? style reveal video online for free. Automatic silhouette, Pokémon cries, custom sounds, and video download.">
+
+  <meta
+    name="twitter:image"
+    content="./Mango/Assets/Extras/icon-512.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Who's That Pokémon? Reveal Video Maker",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Any",
+    "description": "Free fan-made tool for creating Who's That Pokémon? style reveal videos with automatic Pokémon silhouettes, Pokémon cries, custom audio, and browser-based video export.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Automatic Pokémon silhouette generator",
+      "Pokémon cry sound selection",
+      "Custom audio upload and recording",
+      "Reveal timing controls",
+      "HD background video support",
+      "Browser-based video export"
+    ]
+  }
+  </script>
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -66,14 +121,6 @@
     style="position: absolute; overflow: hidden;"
     aria-hidden="true">
     <defs>
-      <!--
-        Gentle unsharp-mask style sharpen. Boosts edge contrast
-        to help claw back perceived crispness from soft/old
-        source footage - it cannot invent real detail, only make
-        existing edges read more clearly. Kept mild since
-        sharpening also amplifies noise/grain, which old footage
-        already has plenty of.
-      -->
       <filter id="pokedexSharpen" x="-10%" y="-10%" width="120%" height="120%">
         <feConvolveMatrix
           order="3"
@@ -113,6 +160,7 @@
           id="advancedSettingsButton"
           class="advanced-toggle"
           type="button"
+          title="Open timing, audio, HD video, sharpening, and export-quality settings"
           aria-expanded="false"
           aria-controls="advancedSettings">
           Fine-tune video
@@ -120,6 +168,16 @@
         </button>
       </div>
     </header>
+
+    <section class="seo-intro">
+      <h2>Free Who's That Pokémon? reveal video maker</h2>
+      <p>
+        Make a Who's That Pokémon? style reveal video in your browser. Upload a
+        Pokémon picture, automatically create a black mystery silhouette, choose
+        a Pokémon cry or upload your own sound, adjust the reveal timing, and
+        download the finished video. No account required.
+      </p>
+    </section>
 
     <section
       id="advancedSettings"
@@ -137,6 +195,7 @@
           id="closeAdvancedSettingsButton"
           class="icon-button"
           type="button"
+          title="Close fine-tune video settings"
           aria-label="Close fine-tune video panel">
           ×
         </button>
@@ -154,6 +213,7 @@
           <input
             id="advancedBlankStart"
             type="range"
+            title="When the black Pokémon silhouette appears"
             min="0"
             max="60"
             step="0.01"
@@ -167,6 +227,7 @@
           <input
             id="advancedBlankEnd"
             type="range"
+            title="When the black Pokémon silhouette disappears"
             min="0"
             max="60"
             step="0.01"
@@ -180,6 +241,7 @@
           <input
             id="advancedRevealedStart"
             type="range"
+            title="When the full-colour Pokémon picture is revealed"
             min="0"
             max="60"
             step="0.01"
@@ -193,6 +255,7 @@
           <input
             id="advancedSoundStart"
             type="range"
+            title="When the Pokémon cry or custom sound plays"
             min="0"
             max="60"
             step="0.01"
@@ -210,6 +273,7 @@
           <input
             id="backgroundVolume"
             type="range"
+            title="Volume of the background video in the preview and exported video"
             min="0"
             max="100"
             step="1"
@@ -223,6 +287,7 @@
           <input
             id="soundVolume"
             type="range"
+            title="Volume of the Pokémon cry or custom sound in the preview and exported video"
             min="0"
             max="100"
             step="1"
@@ -244,14 +309,16 @@
           <button
             id="advancedResetPositionButton"
             class="secondary-button full-width"
-            type="button">
+            type="button"
+            title="Move the Pokémon picture back to its default position and size">
             Reset picture position
           </button>
 
           <button
             id="advancedResetAllButton"
             class="text-button full-width"
-            type="button">
+            type="button"
+            title="Reset timing, snip settings, HD background, quality, sharpening, and volume">
             Reset all fine-tuning
           </button>
         </section>
@@ -261,8 +328,8 @@
 
           <p class="advanced-help">
             Cut out a boring middle section to make the video
-            shorter. Everything else - the silhouette,
-            reveal, and sound - stays timed exactly as set above;
+            shorter. Everything else — the silhouette,
+            reveal, and sound — stays timed exactly as set above;
             this just skips over the cut section during playback.
           </p>
 
@@ -279,6 +346,7 @@
           <input
             id="snipStart"
             type="range"
+            title="Beginning of the section to remove"
             min="0"
             max="60"
             step="0.01"
@@ -293,6 +361,7 @@
           <input
             id="snipEnd"
             type="range"
+            title="End of the section to remove"
             min="0"
             max="60"
             step="0.01"
@@ -331,6 +400,7 @@
           <input
             id="exportQuality"
             type="range"
+            title="Higher bitrate preserves more detail but creates a larger video file"
             min="2"
             max="20"
             step="1"
@@ -380,22 +450,13 @@
 
             <canvas
               id="outputCanvas"
+              class="output-canvas"
               aria-label="Pokémon reveal preview">
             </canvas>
 
             <div id="canvasMessage" class="canvas-message">
               Loading your reveal preview...
             </div>
-
-            <button
-              id="centerPlayButton"
-              class="center-play-button"
-              type="button"
-              title="Play reveal"
-              aria-label="Play reveal"
-              disabled>
-              ▶
-            </button>
           </div>
 
           <div class="editor-toolbar">
@@ -403,7 +464,7 @@
               id="playPauseButton"
               class="toolbar-icon-button"
               type="button"
-              title="Play reveal"
+              title="Play or pause the reveal preview"
               aria-label="Play reveal"
               disabled>
               ▶
@@ -413,7 +474,7 @@
               id="muteButton"
               class="toolbar-icon-button"
               type="button"
-              title="Mute preview"
+              title="Mute or unmute the preview"
               aria-label="Mute preview"
               disabled>
               🔊
@@ -427,6 +488,7 @@
               <input
                 id="previewVolume"
                 type="range"
+                title="Preview-only volume; does not change the exported video"
                 min="0"
                 max="100"
                 step="1"
@@ -441,6 +503,7 @@
             <input
               id="timeline"
               type="range"
+              title="Scrub through the reveal preview"
               min="0"
               max="0"
               value="0"
@@ -469,6 +532,7 @@
             class="workflow-tab active"
             type="button"
             data-panel="pokemonPanel"
+            title="Search for a Pokémon and choose its name"
             aria-current="step">
             <span class="workflow-tab-icon">⌕</span>
 
@@ -485,7 +549,8 @@
           <button
             class="workflow-tab"
             type="button"
-            data-panel="picturePanel">
+            data-panel="picturePanel"
+            title="Upload the reveal picture and manage its silhouette">
             <span class="workflow-tab-icon">✦</span>
 
             <span class="workflow-tab-copy">
@@ -501,7 +566,8 @@
           <button
             class="workflow-tab"
             type="button"
-            data-panel="soundPanel">
+            data-panel="soundPanel"
+            title="Choose a Pokémon cry, upload audio, or record your own sound">
             <span class="workflow-tab-icon">♪</span>
 
             <span class="workflow-tab-copy">
@@ -517,7 +583,8 @@
           <button
             class="workflow-tab"
             type="button"
-            data-panel="timingPanel">
+            data-panel="timingPanel"
+            title="Download your finished reveal video">
             <span class="workflow-tab-icon">⇩</span>
 
             <span class="workflow-tab-copy">
@@ -553,12 +620,14 @@
               class="text-input"
               type="search"
               placeholder="Try Pikachu or Bulbasaur..."
-              autocomplete="off">
+              autocomplete="off"
+              title="Search Pokémon by name">
 
             <button
               id="pokemonSearchButton"
               class="secondary-button"
-              type="button">
+              type="button"
+              title="Search the Pokémon database">
               Find Pokémon
             </button>
           </div>
@@ -567,6 +636,7 @@
             id="pokemonResults"
             class="pokemon-results"
             size="5"
+            title="Search results"
             aria-label="Pokémon search results">
           </select>
 
@@ -574,6 +644,7 @@
             id="loadPokemonButton"
             class="primary-button full-width"
             type="button"
+            title="Load the selected Pokémon picture and cry"
             disabled>
             Use this Pokémon
           </button>
@@ -594,7 +665,8 @@
             type="text"
             value="Pikachu"
             maxlength="40"
-            autocomplete="off">
+            autocomplete="off"
+            title="Name displayed when the Pokémon is revealed">
 
           <label class="checkbox-row" for="showNameText">
             <input
@@ -619,7 +691,8 @@
             <button
               class="primary-button workflow-next-button"
               type="button"
-              data-next-panel="picturePanel">
+              data-next-panel="picturePanel"
+              title="Continue to the picture setup step">
               Choose pictures
             </button>
           </div>
@@ -647,7 +720,8 @@
 
           <label
             class="file-button primary-button full-width"
-            for="revealedImageInput">
+            for="revealedImageInput"
+            title="Upload a PNG, WebP, or JPEG picture to reveal">
             Upload picture
           </label>
 
@@ -669,14 +743,16 @@
             <button
               id="resetPositionButton"
               class="text-button"
-              type="button">
+              type="button"
+              title="Move the picture back to its default position and size">
               Reset picture position
             </button>
 
             <button
               id="regenerateSilhouetteButton"
               class="text-button"
-              type="button">
+              type="button"
+              title="Create the black mystery silhouette again from the current picture">
               Redo silhouette
             </button>
           </div>
@@ -686,7 +762,8 @@
 
             <label
               class="file-button secondary-button full-width"
-              for="blankImageInput">
+              for="blankImageInput"
+              title="Upload your own black silhouette image">
               Upload silhouette
             </label>
 
@@ -708,7 +785,8 @@
             <button
               class="primary-button workflow-next-button"
               type="button"
-              data-next-panel="soundPanel">
+              data-next-panel="soundPanel"
+              title="Continue to the sound setup step">
               Choose sound
             </button>
           </div>
@@ -741,14 +819,16 @@
             <button
               id="chooseAudioButton"
               class="secondary-button"
-              type="button">
+              type="button"
+              title="Upload an audio file to use as the reveal sound">
               Upload Custom Audio
             </button>
 
             <button
               id="recordAudioButton"
               class="secondary-button"
-              type="button">
+              type="button"
+              title="Record a custom sound using your microphone">
               Use Microphone
             </button>
           </div>
@@ -781,7 +861,8 @@
             <button
               id="stopRecordingButton"
               class="danger-button full-width"
-              type="button">
+              type="button"
+              title="Stop recording and use the recording">
               Stop recording
             </button>
           </div>
@@ -805,7 +886,8 @@
 
             <select
               id="cryVersion"
-              class="text-input">
+              class="text-input"
+              title="Choose between the modern and classic Pokémon cry versions">
               <option value="latest">Latest</option>
               <option value="legacy">Classic</option>
             </select>
@@ -819,6 +901,7 @@
                 id="previewCryButton"
                 class="secondary-button"
                 type="button"
+                title="Listen to the selected Pokémon cry"
                 disabled>
                 Play Pokémon sound
               </button>
@@ -827,6 +910,7 @@
                 id="useCryButton"
                 class="primary-button"
                 type="button"
+                title="Use the selected Pokémon cry in the reveal"
                 disabled>
                 Use this Pokémon sound
               </button>
@@ -837,6 +921,7 @@
             id="editAudioButton"
             class="secondary-button full-width"
             type="button"
+            title="Choose which part of the audio to use"
             aria-expanded="false"
             aria-controls="audioEditor">
             Trim Audio
@@ -863,6 +948,7 @@
             <input
               id="audioTrimStart"
               type="range"
+              title="Start point of the audio clip"
               min="0"
               max="0"
               step="0.01"
@@ -876,6 +962,7 @@
             <input
               id="audioTrimEnd"
               type="range"
+              title="End point of the audio clip"
               min="0"
               max="0"
               step="0.01"
@@ -891,7 +978,8 @@
               <button
                 id="playAudioSelectionButton"
                 class="secondary-button full-width"
-                type="button">
+                type="button"
+                title="Listen to the selected audio section">
                 Play selected part
               </button>
             </div>
@@ -908,7 +996,8 @@
             <button
               class="primary-button workflow-next-button"
               type="button"
-              data-next-panel="timingPanel">
+              data-next-panel="timingPanel"
+              title="Continue to the download step">
               Set reveal timing
             </button>
           </div>
@@ -944,10 +1033,26 @@
               id="downloadButton"
               class="save-button large-download full-width"
               type="button"
+              title="Play through the reveal once and record the finished video"
               disabled>
               <span aria-hidden="true">⇩</span>
               Download reveal video
             </button>
+
+            <button
+              id="downloadWithoutPreviewButton"
+              class="secondary-button full-width"
+              type="button"
+              title="Create and download the video immediately without running the interactive preview first"
+              disabled>
+              Download without preview
+            </button>
+
+            <p class="advanced-help">
+              “Download without preview” still renders the real export at full
+              quality; it simply does not run the normal interactive preview
+              first.
+            </p>
           </div>
 
           <div class="workflow-navigation">
