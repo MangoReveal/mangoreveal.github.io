@@ -28,8 +28,8 @@
     },
 
     canvas: {
-      width: 1920,
-      height: 1080,
+      width: 1280,
+      height: 720,
     },
 
     artwork: {
@@ -151,7 +151,6 @@
       backgroundVideo: $("#backgroundVideo"),
       canvas: $("#outputCanvas"),
       canvasMessage: $("#canvasMessage"),
-      centerPlayButton: $("#centerPlayButton"),
 
       playPauseButton: $("#playPauseButton"),
       muteButton: $("#muteButton"),
@@ -505,12 +504,11 @@
   }
 
   function setUiEnabled(enabled) {
-    const elements = [
-      state.ui.playPauseButton,
-      state.ui.centerPlayButton,
-      state.ui.muteButton,
-      state.ui.timeline,
-    ];
+const elements = [
+state.ui.playPauseButton,
+state.ui.muteButton,
+state.ui.timeline
+];
 
     for (const element of elements) {
       if (element) {
@@ -1149,21 +1147,9 @@
     const icon = isPlaying ? "❚❚" : "▶";
     const label = isPlaying ? "Pause reveal" : "Play reveal";
 
-    state.ui.playPauseButton.textContent = icon;
-    state.ui.centerPlayButton.textContent = icon;
-
-    state.ui.playPauseButton.setAttribute(
-      "aria-label",
-      label,
-    );
-
-    state.ui.centerPlayButton.setAttribute(
-      "aria-label",
-      label,
-    );
-
-    state.ui.playPauseButton.title = label;
-    state.ui.centerPlayButton.title = label;
+state.ui.playPauseButton.textContent = icon;
+state.ui.playPauseButton.setAttribute("aria-label", label);
+state.ui.playPauseButton.title = label;state.ui.centerPlayButton.title = label;
   }
 
   async function togglePreview() {
@@ -1208,14 +1194,9 @@
   function bindPlaybackControls() {
     state.ui.playPauseButton.addEventListener(
       "click",
-      togglePreview,
+     togglePreview
     );
-
-    state.ui.centerPlayButton.addEventListener(
-      "click",
-      togglePreview,
-    );
-
+    
     state.ui.timeline.addEventListener("input", () => {
       state.ui.backgroundVideo.currentTime = Number(
         state.ui.timeline.value,
